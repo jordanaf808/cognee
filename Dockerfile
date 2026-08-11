@@ -72,6 +72,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Doppler
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg && \
+    curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | tee /etc/apt/sources.list.d/doppler-cli.list && \
+    apt-get update && \
+    apt-get -y install doppler
+
 WORKDIR /app
 
 # Run as the same non-root user as the cognee-mcp image (uid/gid 1000) so both
@@ -122,7 +129,8 @@ USER cognee
 RUN python -c "from cognee_db_workers._kuzu_helpers import install_json_extension_local; install_json_extension_local(buffer_pool_size=268435456)" \
     || echo "WARNING: JSON extension pre-install skipped (no network at build time); it will be installed on first run if the container has network access."
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+# wrap entrypoint with Doppler to inject environment variables to processes, like Claude.
+ENTRYPOINT ["doppler", "run", "--", "/app/entrypoint.sh"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
