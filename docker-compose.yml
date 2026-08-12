@@ -17,6 +17,17 @@ services:
       # Uncomment to allow ingestion of local files from host:
       # - /path/to/your/data:/data
       - ${HOME}/.cognee-data:/cognee-data
+      # Ladybug's extension directory, kept on the host so it survives the
+      # container being recreated. Ladybug downloads extensions (e.g. json) on
+      # first boot from extension.ladybugdb.com; when that host is unreachable
+      # the backend never becomes healthy. Extensions can be re-populated
+      # offline from the official mirror image:
+      #   docker run -d -p 8080:80 ghcr.io/ladybugdb/extension-repo:latest
+      #   curl -o libjson.lbug_extension \
+      #     http://localhost:8080/v0.18.1/linux_arm64/json/libjson.lbug_extension
+      # then place it under <version>/<platform>/<name>/ in the directory below
+      # (note: no "v" prefix on the version folder).
+      - ${HOME}/.cognee-lbdb:/root/.lbdb
     environment:
       - DEBUG=false # Change to true if debugging
       - ENV=local
