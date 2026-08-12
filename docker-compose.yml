@@ -16,6 +16,7 @@ services:
       - cognee_data:/cognee-storage/data
       # Uncomment to allow ingestion of local files from host:
       # - /path/to/your/data:/data
+      - ${HOME}/.cognee-data:/cognee-data
     environment:
       - DEBUG=false # Change to true if debugging
       - ENV=local
@@ -33,14 +34,18 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-}
       # CAUTION: Default '*' allows all origins. Override with specific domains in production.
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
+      - DATA_ROOT_DIRECTORY=/cognee-data/data
+      - SYSTEM_ROOT_DIRECTORY=/cognee-data/system
+      - HASH_API_KEY=true
     extra_hosts:
       # Allows the container to reach your local machine using "host.docker.internal" instead of "localhost"
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     ports:
       - 8000:8000
       - 5678:5678 # Debugger port
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,7 +53,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4.0"
+          cpus: '4.0'
           memory: 8GB
 
   # Cognee MCP Server - Model Context Protocol server for IDE integration
@@ -93,16 +98,24 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-}
       # MCP specific configuration
       - PYTHONUNBUFFERED=1
+      - API_URL=http://cognee:8000
+      - API_TOKEN=${COGNEE_MCP_API_TOKEN}
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     ports:
       # Host ports differ from the main `cognee` service so both can run together
       # (the MCP server still listens on 8000 inside the container).
-      - "8001:8000" # MCP port
-      - "5679:5678" # MCP debugger port
+      - '8001:8000' # MCP port
+      - '5679:5678' # MCP debugger port
     healthcheck:
       # The MCP runtime image is python-slim (no curl), so probe with urllib.
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=5).status==200 else 1)"]
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=5).status==200 else 1)",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -110,7 +123,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2.0"
+          cpus: '2.0'
           memory: 4GB
 
   # cognee UI. `--profile ui` runs the published image, so a user without the
@@ -161,7 +174,7 @@ services:
       - cognee-network
 
   neo4j:
-    image: neo4j:5.26  # Pinned to 5.x; compatible with neo4j Python driver >=5.28,<6
+    image: neo4j:5.26 # Pinned to 5.x; compatible with neo4j Python driver >=5.28,<6
     container_name: neo4j
     restart: always
     profiles:
@@ -195,7 +208,7 @@ services:
     networks:
       - cognee-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cognee -d cognee_db"]
+      test: ['CMD-SHELL', 'pg_isready -U cognee -d cognee_db']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -207,23 +220,21 @@ services:
     profiles:
       - redis
     ports:
-      - "6379:6379"
+      - '6379:6379'
     networks:
       - cognee-network
     volumes:
       - redis_data:/data
-    command: [ "redis-server", "--appendonly", "yes" ]
-
+    command: ['redis-server', '--appendonly', 'yes']
 
   redisinsight:
     image: redislabs/redisinsight:latest
     container_name: redisinsight
     restart: always
     ports:
-      - "5540:5540"
+      - '5540:5540'
     networks:
       - cognee-network
-
 
 networks:
   cognee-network:
