@@ -1,7 +1,7 @@
 services:
   cognee:
     container_name: cognee
-    restart: always
+    restart: unless-stopped
     networks:
       - cognee-network
     build:
@@ -145,6 +145,8 @@ services:
       # backend directly, so when you do set this it must be the address as
       # seen from the browser, not the `cognee` service name.
       - COGNEE_BACKEND_URL=${COGNEE_BACKEND_URL:-}
+      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_IS_CLOUD_ENVIRONMENT=false
     depends_on:
       cognee:
         condition: service_healthy
@@ -164,6 +166,8 @@ services:
       target: dev
     environment:
       - COGNEE_BACKEND_URL=${COGNEE_BACKEND_URL:-}
+      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_IS_CLOUD_ENVIRONMENT=false
     volumes:
       - ./cognee-frontend/src:/app/src
       - ./cognee-frontend/public:/app/public
@@ -231,6 +235,11 @@ services:
     image: redislabs/redisinsight:latest
     container_name: redisinsight
     restart: always
+    # Upstream omits this, making redisinsight a default service that starts on
+    # every `up` — including when `redis` (profile-gated above) isn't running,
+    # leaving a Redis GUI with nothing to inspect holding port 5540.
+    profiles:
+      - redis
     ports:
       - '5540:5540'
     networks:
